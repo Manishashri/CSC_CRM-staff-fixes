@@ -6,9 +6,11 @@ from django.core.validators import MinValueValidator
 from decimal import Decimal
 from cloudinary.models import CloudinaryField
 from django.core.exceptions import ValidationError
+from csc_crm.validators import validate_indian_mobile
 
 name_validator = RegexValidator( regex=r'^[A-Za-z ]+$',message="Only alphabets and spaces are allowed.")
-phone_validator = RegexValidator(regex=r'^\+91[6-9]\d{9}$',message="Phone number must start with +91 and contain exactly 10 digits.")
+# Phone numbers are 10 digits starting with 6/7/8/9, entered WITHOUT +91 (see csc_crm/validators.py)
+phone_validator = validate_indian_mobile
 email_validator = RegexValidator(regex=r'^[\w\.-]+@[\w\.-]+\.\w+$',message="Enter a proper email (example: name@gmail.com)")
 
 
@@ -183,7 +185,6 @@ class Enrollment(models.Model):
 
     def save(self, *args, **kwargs):
         self.full_clean()
-
         super().save(*args, **kwargs)
 
     @property
@@ -199,7 +200,7 @@ class Enrollment(models.Model):
     def __str__(self):
 
         return str(self.admission)
-    #==============================Student Note Model=======================================
+#==============================Student Note Model=======================================
 class StudentNote(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='notes')
     content = models.TextField()

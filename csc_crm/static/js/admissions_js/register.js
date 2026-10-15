@@ -117,13 +117,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (phoneInput) {
-        phoneInput.placeholder = "+91 XXXXXXXXXX";
-        phoneInput.setAttribute("maxlength", "13");
+        phoneInput.placeholder = "10-digit mobile number";
+        phoneInput.setAttribute("maxlength", "10");
+        phoneInput.setAttribute("inputmode", "numeric");
     }
 
     if (guardianPhoneInput) {
-        guardianPhoneInput.placeholder = "+91 XXXXXXXXXX";
-        guardianPhoneInput.setAttribute("maxlength", "13");
+        guardianPhoneInput.placeholder = "10-digit mobile number";
+        guardianPhoneInput.setAttribute("maxlength", "10");
+        guardianPhoneInput.setAttribute("inputmode", "numeric");
     }
 
 
@@ -136,8 +138,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const basicEmailPattern =
         /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
+    // 10 digits, starts with 6/7/8/9, NO +91 (shared rule: phone_validation.js)
     const indianPhonePattern =
-        /^\+91[6-9]\d{9}$/;
+        /^[6-9]\d{9}$/;
 
 
     const allowedDomainEndings = [
@@ -304,30 +307,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (!input) return;
 
-        let value = input.value;
-
-        // Only numbers and +
-        value = value.replace(/[^0-9+]/g, "");
-
-        // + only at beginning
-        if (value.startsWith("+")) {
-
-            value =
-                "+" +
-                value
-                    .substring(1)
-                    .replace(/\+/g, "");
-
-        } else {
-
-            value =
-                value.replace(/\+/g, "");
-        }
-
-        // Maximum +91 + 10 digits
-        value = value.substring(0, 13);
-
-        input.value = value;
+        // digits only, maximum 10 (no +91)
+        input.value = CSCPhone.sanitize(input.value);
     }
 
 
@@ -361,9 +342,9 @@ document.addEventListener("DOMContentLoaded", () => {
             // Numbers
             if (/^[0-9]$/.test(e.key)) {
 
-                // Don't allow more than 13 characters
+                // Don't allow more than 10 digits
                 if (
-                    this.value.length >= 13 &&
+                    this.value.length >= 10 &&
                     this.selectionStart === this.selectionEnd
                 ) {
                     e.preventDefault();
@@ -372,12 +353,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            // + only at first position
-            if (
-                e.key === "+" &&
-                this.selectionStart === 0 &&
-                !this.value.includes("+")
-            ) {
+            // Ctrl / Cmd shortcuts (copy, paste, select all)
+            if (e.ctrlKey || e.metaKey) {
                 return;
             }
 
@@ -405,28 +382,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 (e.clipboardData || window.clipboardData)
                     .getData("text");
 
+            // digits only - a pasted "+91..." loses the symbols
             pasted =
-                pasted.replace(/[^0-9+]/g, "");
-
-            if (pasted.includes("+")) {
-
-                if (pasted.startsWith("+")) {
-
-                    pasted =
-                        "+" +
-                        pasted
-                            .substring(1)
-                            .replace(/\+/g, "");
-
-                } else {
-
-                    pasted =
-                        pasted.replace(/\+/g, "");
-                }
-            }
-
-            pasted =
-                pasted.substring(0, 13);
+                pasted.replace(/\D/g, "");
 
             const start =
                 this.selectionStart;
@@ -872,7 +830,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             showError(
                 phoneInput,
-                "Phone number should start with +91 and contain a valid 10-digit Indian mobile number."
+                CSCPhone.error(phone) || "Enter a valid 10-digit mobile number."
             );
 
             return false;
@@ -1012,7 +970,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             showError(
                 guardianPhoneInput,
-                "Guardian phone number should start with +91 and contain a valid 10-digit Indian mobile number."
+                "Guardian " + (CSCPhone.error(phone) || "phone number is invalid.").replace(/^Phone number/, "phone number")
             );
 
             return false;

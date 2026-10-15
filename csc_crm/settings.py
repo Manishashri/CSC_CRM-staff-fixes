@@ -206,3 +206,24 @@ if os.environ.get('EMAIL_HOST_USER'):
 else:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
     DEFAULT_FROM_EMAIL = 'csc.attendance@example.com'
+
+# =====================================================================
+# CSC-CRM BUSINESS RULES (change here - no code changes needed)
+# =====================================================================
+
+# --- Staff check-in (Requirement 06) -----------------------------------
+# Scheduled login time + grace period. Check-in up to and INCLUDING
+# 09:30:00 is "Present"; anything after 09:30:00 is "Late".
+STAFF_LOGIN_TIME = (9, 0)              # (hour, minute) = 9:00 AM
+STAFF_CHECKIN_GRACE_MINUTES = 30
+
+# --- Staff attendance (Requirement 05) ---------------------------------
+# Official Total Working Days shown on the Staff Attendance / Overview
+# pages. Client has not given a formula yet, so it is fixed at 28.
+STAFF_TOTAL_WORKING_DAYS = 28
+
+# --- Student overview (Requirement 01) ---------------------------------
+# A student of an ongoing batch is "Long-Absent" when their latest
+# attendance records are this many ABSENT days in a row.
+# PLACEHOLDER - definition still to be confirmed with the client.
+LONG_ABSENT_CONSECUTIVE_DAYS = 7

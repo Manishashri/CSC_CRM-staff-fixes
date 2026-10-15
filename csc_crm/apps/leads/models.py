@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 from ..staff.models import Staff
+from csc_crm.validators import validate_indian_mobile
 
 # Lead Model
 class LeadCapture(models.Model):
@@ -52,7 +53,7 @@ class LeadCapture(models.Model):
     lead_id = models.CharField(max_length=10, unique=True)
     lead_name = models.CharField(max_length=100,)
     email = models.EmailField(blank=True, null=True, unique=True)
-    phone_no = models.CharField(unique=True, max_length=13,)
+    phone_no = models.CharField(unique=True, max_length=13, validators=[validate_indian_mobile])
     course_interested = models.CharField(max_length=100, choices=COURSE_CHOICES)
     lead_source = models.CharField(max_length=100, choices=SOURCE_CHOICES)
     assigned_to = models.ForeignKey(Staff, on_delete=models.SET_NULL, null=True, blank=True)

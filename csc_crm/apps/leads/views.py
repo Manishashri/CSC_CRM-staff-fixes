@@ -1167,3 +1167,48 @@ def my_lead_capture_target(request):
     }
 
     return render(request, 'leads/my_target.html', context)
+
+# ================== STAFF-SCOPED LEAD LIST (Staff Overview -> Recent Leads -> View All) ==================
+@login_required(login_url='staff_login')
+@role_required(['Admin', 'Manager'])
+def staff_assigned_leads(request, staff_id):
+    """
+    Shows ONLY the leads assigned to one staff member.
+    Opened from Staff Overview -> Recent Leads -> "View All", so the staff
+    member being viewed (staff_id) is kept in the URL.
+    """
+    staff = get_object_or_404(Staff, id=staff_id)
+
+    leads = LeadCapture.objects.filter(assigned_to=staff).order_by('-created_at')
+
+    search_query = request.GET.get('search', '').strip()
+    status = request.GET.get('status', '').strip()
+
+    if search_query:
+        leads = leads.filter(
+            Q(lead_name__icontains=search_query) |
+            Q(email__icontains=search_query) |
+            Q(phone_no__icontains=search_query) |
+            Q(lead_id__icontains=search_query)
+        )
+
+    valid_statuses = [value for value, _ in LeadCapture.STATUS_CHOICES]
+    if status in valid_statuses:
+        leads = leads.filter(initial_status=status)
+    else:
+        status = ''
+
+    paginator = Paginator(leads, 10)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    context = {
+        'staff': staff,
+        'leads': page_obj,
+        'page_obj': page_obj,
+        'total_leads': paginator.count,
+        'search_query': search_query,
+        'selected_status': status,
+        'status_choices': LeadCapture.STATUS_CHOICES,
+    }
+
+    return render(request, 'leads/staff_assigned_leads.html', context)

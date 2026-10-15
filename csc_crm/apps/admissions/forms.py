@@ -97,7 +97,12 @@ class StudentForm(forms.ModelForm):
     def clean_guardian_phone_no(self):
         phone = self.cleaned_data.get('guardian_phone_no')
 
-        if Student.objects.filter(phone_no=phone).exists():
+        # guardian phone is unique too - check BOTH columns, otherwise a repeated
+        # guardian number passes the form and crashes at the database
+        if (
+            Student.objects.filter(phone_no=phone).exists()
+            or Student.objects.filter(guardian_phone_no=phone).exists()
+        ):
 
             raise forms.ValidationError(
                 "Phone number already exists"

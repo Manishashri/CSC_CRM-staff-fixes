@@ -8,8 +8,8 @@ from django.core.validators import RegexValidator
 name_validator = RegexValidator(regex=r'^[A-Za-z ]+$',
                                 message="Only alphabets and spaces are allowed.")
 
-phone_validator = RegexValidator(regex=r'^\d{10}$',
-                                 message="Phone number must be exactly 10 digits.")
+phone_validator = RegexValidator(regex=r'^[6-9]\d{9}$',
+                                 message="Phone number must be 10 digits and start with 6, 7, 8 or 9.")
 
 email_validator = RegexValidator(regex=r'^[\w\.-]+@[\w\.-]+\.\w+$',
                                  message="Enter a proper email (example: name@gmail.com)")
@@ -83,21 +83,23 @@ class Batch(models.Model):
             })
 
         # Same trainer cannot have overlapping batch duration
+        # (the check lives INSIDE the if - a batch without a trainer or without an
+        #  end date has nothing to compare and used to crash with UnboundLocalError)
         if self.trainer and self.end_date:
             overlapping_batches = Batch.objects.exclude(
-            pk=self.pk
-        ).filter(
-        trainer=self.trainer,
-        timing=self.timing,
-        start_date__lte=self.end_date,
-        end_date__gte=self.start_date
-    )
+                pk=self.pk
+            ).filter(
+                trainer=self.trainer,
+                timing=self.timing,
+                start_date__lte=self.end_date,
+                end_date__gte=self.start_date
+            )
 
-        if overlapping_batches.exists():
-            raise ValidationError({
-            'trainer':
-            'Trainer already assigned to another batch for this timing during the selected period.'
-        })
+            if overlapping_batches.exists():
+                raise ValidationError({
+                    'trainer':
+                    'Trainer already assigned to another batch for this timing during the selected period.'
+                })
 
         # Completed batch must have end date
         if self.status == 'Completed' and not self.end_date:

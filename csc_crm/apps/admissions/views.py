@@ -1,4 +1,5 @@
 import os
+from csc_crm.validators import get_phone_error
 import uuid
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render, get_object_or_404
@@ -669,14 +670,36 @@ def edit_student(request, id):
     )
 
     if request.method == 'POST':
+        # ---- phone validation (10 digits, starts 6/7/8/9, no +91) ----
+        phone_value = (request.POST.get('phone_no') or '').strip()
+        guardian_value = (request.POST.get('guardian_phone_no') or '').strip()
+
+        phone_error = get_phone_error(phone_value)
+        guardian_error = get_phone_error(guardian_value)
+
+        if phone_error or guardian_error:
+            if phone_error:
+                messages.error(request, f"Student phone: {phone_error}")
+            if guardian_error:
+                messages.error(request, f"Guardian phone: {guardian_error}")
+            return redirect('edit_student', id=student_obj.id)
+
+        if Student.objects.filter(phone_no=phone_value).exclude(pk=student_obj.pk).exists():
+            messages.error(request, "Student phone: this phone number already exists.")
+            return redirect('edit_student', id=student_obj.id)
+
+        if Student.objects.filter(guardian_phone_no=guardian_value).exclude(pk=student_obj.pk).exists():
+            messages.error(request, "Guardian phone: this phone number already exists.")
+            return redirect('edit_student', id=student_obj.id)
+
         student_obj.first_name = request.POST.get('first_name')
         student_obj.last_name = request.POST.get('last_name')
         student_obj.email = request.POST.get('email')
-        student_obj.phone_no = request.POST.get('phone_no')
+        student_obj.phone_no = phone_value
         student_obj.dob = request.POST.get('dob')
         student_obj.gender = request.POST.get('gender')
         student_obj.guardian_name = request.POST.get('guardian_name')
-        student_obj.guardian_phone_no = request.POST.get('guardian_phone_no')
+        student_obj.guardian_phone_no = guardian_value
         student_obj.address = request.POST.get('address')
 
         if request.FILES.get('photo'):

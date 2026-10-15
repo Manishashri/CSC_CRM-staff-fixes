@@ -27,6 +27,7 @@ urlpatterns = [
 
     # VALIDATION (EMAIL)
     path('check-email/', check_email, name='check_email'),
+    path('check-employee-id/', check_employee_id, name='check_employee_id'),
     path('check-phone/', check_phone, name='check_phone'),
 
     # DOCUMENT URLS

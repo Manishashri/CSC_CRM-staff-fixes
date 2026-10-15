@@ -1,5 +1,6 @@
 from django import forms
 from .models import *
+from csc_crm.validators import clean_indian_mobile
 
 
 class LeadCaptureForm(forms.ModelForm):
@@ -19,7 +20,9 @@ class LeadCaptureForm(forms.ModelForm):
             }),
             'phone_no': forms.TextInput(attrs={
                 'id': 'phone_no',
-                'placeholder': 'Enter phone number',
+                'placeholder': '10-digit mobile number',
+                'maxlength': '10',
+                'inputmode': 'numeric',
             }),
             'lead_name': forms.TextInput(attrs={
                 'placeholder': 'Enter lead name',
@@ -40,19 +43,8 @@ class LeadCaptureForm(forms.ModelForm):
         )
 
     def clean_phone_no(self):
-        phone = self.cleaned_data.get('phone_no')
-
-        if phone:
-            if (
-                not phone.startswith('+91')
-                or not phone[3:].isdigit()
-                or len(phone[3:]) != 10
-            ):
-                raise forms.ValidationError(
-                    'Phone number should start with +91 and contain a valid 10-digit Indian mobile number.'
-                )
-
-        return phone
+        # 10 digits, starts with 6/7/8/9, no +91 prefix (Requirement 07)
+        return clean_indian_mobile(self.cleaned_data.get('phone_no'))
 
 
 # Call-log form
