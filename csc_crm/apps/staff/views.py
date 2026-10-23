@@ -822,7 +822,7 @@ def overview(request, staff_id=None):
     pending_leads = leads.filter(
         initial_status__in=["new", "contacted", "interested", "demo_scheduled"]
     ).count()
-    recent_leads = leads.order_by("-created_at")[:6]
+    recent_leads = leads.order_by("-created_at", "-id")[:6]
 
     # === TARGET PROGRESS ===
     target_amount = float(staff.monthly_target or 0)
@@ -2105,15 +2105,17 @@ def staff_dashboard(request):
         ).select_related(
             'assigned_to'
         ).order_by(
-            '-created_at'
+            '-created_at', '-id'
         )[:5]
 
     else:
 
+        # '-id' breaks ties: leads created in the same instant (same created_at)
+        # must still come newest first
         recent_leads = LeadCapture.objects.select_related(
             'assigned_to'
         ).order_by(
-            '-created_at'
+            '-created_at', '-id'
         )[:5]
 
     # =====================================================

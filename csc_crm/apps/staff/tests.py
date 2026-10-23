@@ -335,6 +335,10 @@ class DashboardNumbersTests(TestCase):
         seller = make_staff('Sales Exec', 'Sales')
         ids = [make_lead(seller).id for _ in range(7)]
 
+        # leads created in the same instant (Windows clock is coarse) have an
+        # identical created_at - the newest id must still come first
+        LeadCapture.objects.filter(id__in=ids).update(created_at=timezone.now())
+
         recent = [lead.id for lead in self._dashboard()['recent_leads']]
         self.assertEqual(recent, sorted(ids, reverse=True)[:5])
 
