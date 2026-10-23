@@ -15,9 +15,12 @@ window.CSCPhone = (function () {
     var MSG_LENGTH   = "Phone number must be exactly 10 digits.";
     var MSG_START    = "Phone number must start with 6, 7, 8 or 9.";
 
-    // Remove everything that is not a digit and keep max 10 digits
+    // Remove everything that is not a digit (letters, "+", spaces ...).
+    // The value is NOT cut to 10 digits: cutting "+919876543210" to its first
+    // 10 digits would silently turn it into a DIFFERENT, valid-looking number
+    // (9198765432). A too-long number must show the "exactly 10 digits" error.
     function sanitize(value) {
-        return String(value || "").replace(/\D/g, "").slice(0, 10);
+        return String(value || "").replace(/\D/g, "");
     }
 
     // Returns "" when valid, otherwise the message to show

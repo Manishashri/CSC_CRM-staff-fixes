@@ -9,6 +9,9 @@ class LeadCaptureForm(forms.ModelForm):
         model = LeadCapture
         fields = '__all__'
         exclude = ['lead_id', 'created_at', 'updated_at']
+        error_messages = {
+            'phone_no': {'required': 'Phone number is required.'},
+        }
         widgets = {
             'enquiry_date': forms.DateInput(attrs={
                 'type': 'date',

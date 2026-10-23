@@ -171,24 +171,6 @@ def get_donut_values(active, completed, long_absent, total):
     return (active_pct, completed_pct, long_absent_pct,
             active_deg, completed_deg, long_absent_deg)
 
-
-def add_strength_bar(batches):
-    """
-    Batch Strength panel (Requirement 02): strength = live student count.
-    The bar is drawn relative to the biggest batch in the list, so it is
-    fully dynamic as well (no fixed capacity such as 30 is used).
-    """
-    batches = list(batches)
-    biggest = max((b.enrolled_students for b in batches), default=0)
-
-    for batch in batches:
-        batch.strength_percentage = (
-            round(batch.enrolled_students / biggest * 100)
-            if biggest > 0 else 0
-        )
-
-    return batches
-
 # ============================= LEAD CAPTURE TARGET - ROLES =============================
 MARKETING_TARGET_ROLES = [
     'Marketing Lead', 'Digital Marketing', 'Content Creator',   # marketing team
@@ -1672,17 +1654,21 @@ def staff_dashboard(request):
             status='Completed'
         ).count()
 
-        # Batch strength = real number of students registered in the batch
+        # Batch strength = registered students / strength total.
+        # The strength total grows and shrinks with registrations (3/30 -> 4/31).
         trainer_batch_summary = trainer_batches_qs.select_related(
             'course',
             'trainer'
         ).annotate(
-            enrolled_students=Count('enrollments')
+            enrolled_students=Count('enrollments'),
+            occupancy_percentage=ExpressionWrapper(
+                Count('enrollments') * 100.0 / F('max_students'),
+                output_field=FloatField()
+            )
         ).order_by(
             '-enrolled_students',
             'batch_name'
         )
-        trainer_batch_summary = add_strength_bar(trainer_batch_summary)
 
     # ============================================
     # MY DEPARTMENT ATTENDANCE
@@ -2388,18 +2374,22 @@ def staff_dashboard(request):
         status='Completed'
     ).count()
 
-    # Batch strength = real number of students registered in the batch
-    # (Requirement 02) - no fixed number such as 30 is shown any more.
+    # Batch strength (Requirement 02): registered students / strength total.
+    # The strength total is dynamic - it changes with every registration,
+    # transfer or removal (3/30 -> 4/31) - it is not a fixed 30.
     batch_summary = Batch.objects.select_related(
         'course',
         'trainer'
     ).annotate(
-        enrolled_students=Count('enrollments')
+        enrolled_students=Count('enrollments'),
+        occupancy_percentage=ExpressionWrapper(
+            Count('enrollments') * 100.0 / F('max_students'),
+            output_field=FloatField()
+        )
     ).order_by(
         '-enrolled_students',
         'batch_name'
     )
-    batch_summary = add_strength_bar(batch_summary)
 
     # ================================
     # CONTEXT
@@ -2624,21 +2614,14 @@ def staff_profile(request, staff_id):
     else:
         form = staffProfileForm(instance=staff)
 
-    # Attendance this month
-    now = timezone.now()
-    this_month_attendance = Attendance.objects.filter(
-        staff=staff,
-        date__year=now.year,
-        date__month=now.month
-    )
-    days_present = this_month_attendance.filter(status__in=['Present', 'Late']).count()
-    # Approximate working days in month (Mon-Fri)
-    import calendar
-    cal = calendar.monthcalendar(now.year, now.month)
-    working_days = sum(1 for week in cal for day in week[0:5] if day != 0)
+    # Attendance this month - same numbers and the same official Total Working
+    # Days as the Attendance / Overview / Dashboard pages (Requirement 05).
+    att = get_staff_attendance_summary(staff)
+    days_present = att['present_days'] + att['late_days']
+    working_days = att['total_working_days']
 
     # Leave balance (days not marked Absent/Present in month, rough calc)
-    leave_days = this_month_attendance.filter(status='Leave').count()
+    leave_days = att['leave_days']
     # Simple leave balance: assume 15 days annual / 12 months
     leave_balance = max(0, 15 - leave_days)
 

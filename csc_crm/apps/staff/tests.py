@@ -392,28 +392,36 @@ class DashboardNumbersTests(TestCase):
         self.assertEqual(len(ctx['long_absent_list']), 1)
 
     # ---- Requirement 02 ----
-    def test_batch_strength_is_live_count_and_capacity_untouched(self):
+    def test_batch_strength_total_follows_registrations(self):
         start = self.today - timedelta(days=5)
         course = make_course('Strength')
         batch = make_batch(course, 'Batch A', start, self.today + timedelta(days=60))
+        other = make_batch(course, 'Batch B', start, self.today + timedelta(days=60))
 
-        for _ in range(18):
-            enroll(make_student(), course, batch)
+        def row(b):
+            return [r for r in self._dashboard()['batch_summary'] if r.pk == b.pk][0]
 
-        batch.refresh_from_db()
-        self.assertEqual(batch.max_students, 30)         # capacity is never "adjusted"
+        students = [make_student() for _ in range(3)]
+        for st in students:
+            enroll(st, course, batch)
+        self.assertEqual((row(batch).enrolled_students, row(batch).max_students), (3, 33))
 
-        row = [b for b in self._dashboard()['batch_summary'] if b.pk == batch.pk][0]
-        self.assertEqual(row.enrolled_students, 18)
+        # a new registration: 3/33 -> 4/34 (the strength total grows with it)
+        extra = make_student()
+        enroll(extra, course, batch)
+        self.assertEqual((row(batch).enrolled_students, row(batch).max_students), (4, 34))
+        self.assertContains(self.client.get(reverse('staff_dashboard')), '4/34')
 
-        response = self.client.get(reverse('staff_dashboard'))
-        self.assertContains(response, 'Strength: 18')
-        self.assertNotContains(response, '18/30')
+        # removal: 4/34 -> 3/33
+        Enrollment.objects.filter(admission__student=extra).first().delete()
+        self.assertEqual((row(batch).enrolled_students, row(batch).max_students), (3, 33))
 
-        # removal lowers the strength automatically
-        Enrollment.objects.filter(batch=batch).first().delete()
-        row = [b for b in self._dashboard()['batch_summary'] if b.pk == batch.pk][0]
-        self.assertEqual(row.enrolled_students, 17)
+        # transfer: old batch -1, new batch +1
+        moved = Enrollment.objects.filter(admission__student=students[0]).first()
+        moved.batch = other
+        moved.save()
+        self.assertEqual((row(batch).enrolled_students, row(batch).max_students), (2, 32))
+        self.assertEqual((row(other).enrolled_students, row(other).max_students), (1, 31))
 
     # ---- staff numbers ----
     def test_staff_attendance_percentage_without_other_staff(self):

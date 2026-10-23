@@ -6,6 +6,8 @@ from django.core.validators import MinValueValidator
 from decimal import Decimal
 from cloudinary.models import CloudinaryField
 from django.core.exceptions import ValidationError
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
 from csc_crm.validators import validate_indian_mobile
 
 name_validator = RegexValidator( regex=r'^[A-Za-z ]+$',message="Only alphabets and spaces are allowed.")
@@ -185,7 +187,26 @@ class Enrollment(models.Model):
 
     def save(self, *args, **kwargs):
         self.full_clean()
+
+        # ---- Dynamic batch strength (Requirement 02) ----
+        # Every student added to a batch raises that batch's strength total
+        # by one (3/30 -> 4/31); a transfer moves the +1 to the new batch.
+        is_new = self.pk is None
+        old_batch_id = None
+        if not is_new:
+            old_batch_id = (
+                Enrollment.objects.filter(pk=self.pk)
+                .values_list('batch_id', flat=True)
+                .first()
+            )
+
         super().save(*args, **kwargs)
+
+        if is_new:
+            adjust_batch_strength(self.batch_id, +1)
+        elif old_batch_id != self.batch_id:
+            adjust_batch_strength(old_batch_id, -1)
+            adjust_batch_strength(self.batch_id, +1)
 
     @property
     def student(self):
@@ -200,6 +221,28 @@ class Enrollment(models.Model):
     def __str__(self):
 
         return str(self.admission)
+#=========================== Dynamic batch strength helpers (Requirement 02) ===========================
+def adjust_batch_strength(batch_id, delta):
+    """Add / remove `delta` from a batch's strength total (max_students)."""
+    if not batch_id or not delta:
+        return
+
+    from django.db.models import F
+    from csc_crm.apps.student_attendance.models import Batch
+
+    qs = Batch.objects.filter(pk=batch_id)
+    if delta < 0:
+        qs = qs.filter(max_students__gt=-delta)   # never drop to 0 / negative
+
+    qs.update(max_students=F('max_students') + delta)
+
+
+@receiver(post_delete, sender=Enrollment)
+def enrollment_removed(sender, instance, **kwargs):
+    """A student removed from a batch lowers that batch's strength total."""
+    adjust_batch_strength(instance.batch_id, -1)
+
+
 #==============================Student Note Model=======================================
 class StudentNote(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='notes')

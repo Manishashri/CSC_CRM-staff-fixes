@@ -35,6 +35,10 @@ class StaffForm(forms.ModelForm):
             'gender', 'blood_group', 'address', 'reporting_manager',
             'emergency_contact_name', 'emergency_contact_phone', 'skills',
         ]
+        error_messages = {
+            'employee_id': {'required': 'Employee ID is required.'},
+            'phone': {'required': 'Phone number is required.'},
+        }
         widgets = {
             'employee_id' : forms.TextInput(attrs={
                 'class': 'form-control',
@@ -642,6 +646,9 @@ class staffProfileForm(forms.ModelForm):
             'first_name', 'last_name', 'email', 'phone',
             'profile_photo',
         ]
+        error_messages = {
+            'phone': {'required': 'Phone number is required.'},
+        }
         widgets = {
             'first_name': forms.TextInput(attrs={
                 'class': 'prof-input',

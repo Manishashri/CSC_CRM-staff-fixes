@@ -1055,11 +1055,11 @@
                             <h5>{{ batch.batch_name }}</h5>
                             <span>{{ batch.course.course_name }}</span>
                         </div>
-                        <strong>Strength: {{ batch.enrolled_students }}</strong>
+                        <strong>{{ batch.enrolled_students }}/{{ batch.max_students }}</strong>
                     </div>
 
                     <div class="dash-progress-bar">
-                        <div class="dash-progress-fill" style="width:{{ batch.strength_percentage }}%;"></div>
+                        <div class="dash-progress-fill" style="width:{{ batch.occupancy_percentage }}%;"></div>
                     </div>
 
                 </div>
@@ -1096,11 +1096,11 @@
                             <h5>{{ batch.batch_name }}</h5>
                             <span>{{ batch.course.course_name }}</span>
                         </div>
-                        <strong>Strength: {{ batch.enrolled_students }}</strong>
+                        <strong>{{ batch.enrolled_students }}/{{ batch.max_students }}</strong>
                     </div>
 
                     <div class="dash-progress-bar">
-                        <div class="dash-progress-fill" style="width:{{ batch.strength_percentage }}%;"></div>
+                        <div class="dash-progress-fill" style="width:{{ batch.occupancy_percentage }}%;"></div>
                     </div>
 
                 </div>

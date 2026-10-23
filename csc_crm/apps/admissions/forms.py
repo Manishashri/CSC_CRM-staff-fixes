@@ -32,6 +32,11 @@ class StudentForm(forms.ModelForm):
         model = Student
         fields = '__all__'
 
+        error_messages = {
+            'phone_no': {'required': 'Phone number is required.'},
+            'guardian_phone_no': {'required': 'Phone number is required.'},
+        }
+
         widgets = {
             'first_name': forms.TextInput(attrs={'placeholder': 'Enter first name', 'required': True}),
             'last_name': forms.TextInput(attrs={'placeholder': 'Enter last name', 'required': True}),
